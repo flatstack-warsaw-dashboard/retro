@@ -1,5 +1,6 @@
 module "users_lambda" {
   source = "./functions/users"
+  depends_on = [data.external.app_gem]
 }
 
 resource "aws_apigatewayv2_api" "retro_api" {
@@ -31,4 +32,12 @@ resource "aws_apigatewayv2_route" "users" {
   route_key = "POST /users/{action}"
 
   target = "integrations/${aws_apigatewayv2_integration.users_integration.id}"
+}
+
+data "external" "app_gem" {
+  program = ["bash", "-c", <<EOT
+rake build >&2 && echo "{\"dir\": \"$(pwd)\"}"
+EOT
+  ]
+  working_dir = "${path.module}/retro"
 }

@@ -1,6 +1,8 @@
 require "logger"
 require "json"
 require "forwardable"
+require "aws-sdk-dynamodb"
+require "retro"
 
 module Retro
   class UsersController
@@ -16,13 +18,15 @@ module Retro
 
     def create(event:)
       logger.info event
+      user = Aws::DynamoDB::Resource.new
 
       { statusCode: 200, body: { "action": "create" }.to_json }
     end
 
     def show(event:)
+      users = Retro::User.all
 
-      { statusCode: 200 }
+      { statusCode: 200, body: users.items.to_json }
     end
 
     def self.logger

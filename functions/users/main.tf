@@ -1,5 +1,5 @@
 resource "aws_dynamodb_table" "users" {
-  name         = "users"
+  name         = "retro-users"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "id"
 
@@ -50,6 +50,19 @@ resource "aws_iam_policy" "lambda_policy" {
         ],
         "Resource": "arn:aws:logs:*:*:*",
         "Effect": "Allow"
+      },
+      {
+        "Action": [
+          "dynamodb:BatchGetItem",
+          "dynamodb:GetItem",
+          "dynamodb:Query",
+          "dynamodb:Scan",
+          "dynamodb:BatchWriteItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem"
+        ],
+        "Resource": aws_dynamodb_table.users.arn,
+        "Effect": "Allow"
       }
     ]
   })
@@ -66,8 +79,16 @@ locals {
 
 data "archive_file" "source" {
   type = "zip"
-  source_dir = "${path.module}/src"
+  source_dir = data.external.build.result.dir
   output_path = local.dist_path
+}
+
+data "external" "build" {
+  program = ["bash", "-c", <<EOT
+gem install -i vendor ../../../retro/pkg/retro-0.1.0.gem >&2 && echo "{\"dir\": \"$(pwd)\"}"
+EOT
+  ]
+  working_dir = "${path.module}/src"
 }
 
 resource "aws_lambda_function" "users_lambda" {
@@ -77,6 +98,7 @@ resource "aws_lambda_function" "users_lambda" {
   handler       = "func.Retro.route"
 
   source_code_hash = data.archive_file.source.output_base64sha256
+  environment { variables = { "GEM_PATH" = "./vendor" } }
 
   runtime = "ruby2.7"
 
