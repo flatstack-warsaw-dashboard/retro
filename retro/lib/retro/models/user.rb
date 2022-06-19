@@ -1,5 +1,5 @@
 module Retro
   class User < Model
-    table_name "users"
+    table_name "data"
   end
 end

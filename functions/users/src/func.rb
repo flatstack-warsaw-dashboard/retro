@@ -18,15 +18,19 @@ module Retro
 
     def create(event:)
       logger.info event
-      user = Aws::DynamoDB::Resource.new
+      user = Retro::User.new(event.slice("name"))
 
-      { statusCode: 200, body: { "action": "create" }.to_json }
+      if user.save
+        { statusCode: 200, body: user.to_json }
+      else
+        { statusCode: 400, body: {}.to_json }
+      end
     end
 
     def show(event:)
-      users = Retro::User.all
+      user = Retro::User.find(cid: event["id"])
 
-      { statusCode: 200, body: users.items.to_json }
+      { statusCode: 200, body: user.to_json }
     end
 
     def self.logger

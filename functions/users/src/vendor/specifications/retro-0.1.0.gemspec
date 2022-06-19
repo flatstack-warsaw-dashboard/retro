@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib".freeze]
   s.authors = ["Askarini Zinuretti".freeze]
   s.bindir = "exe".freeze
-  s.date = "2022-06-15"
+  s.date = "2022-06-19"
   s.description = "Retro application is retro to help teams make retro process easier.".freeze
   s.email = ["askar.zinurov@flatstack.com".freeze]
   s.homepage = "https://github.com/flatstack-warsaw-dashboard/retro".freeze

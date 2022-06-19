@@ -19,6 +19,13 @@ terraform {
 provider "aws" {
   region = "eu-central-1"
   profile = "fwd-retro"
+
+  default_tags {
+    tags = {
+      Provisioner = "Terraform"
+      Project     = "Retro"
+    }
+  }
 }
 
 resource "aws_s3_bucket" "remote_state" {
