@@ -10,6 +10,7 @@ module Retro
       none: "NONE", all_old: "ALL_OLD", updated_old: "UPDATED_OLD", all_new: "ALL_NEW", updated_new: "UPDATED_NEW"
     }.freeze
 
+    ROOT_PID = "-".freeze
     PID = "pid".freeze
     CID = "cid".freeze
 
@@ -29,23 +30,32 @@ module Retro
     end
 
     def destroy
-      db.delete_item(api_params.merge(identifier_params))
+      db.delete_item(api_params.merge(key: identifier_params, return_values: RETURN_OPTIONS[:all_old])).attributes
     end
 
     def put
-      response = db.put_item(api_params.merge(item_params).merge(return_values: RETURN_OPTIONS[:all_old]))
+      push_attributes = item_attributes
+      response = db.put_item(api_params.merge(item: push_attributes, return_values: RETURN_OPTIONS[:all_old]))
+      @attributes = push_attributes if response.item
+      response.item
     end
     alias :save :put
 
     def identifier_params
       { CID => identifier }.tap do |attrs|
-        attrs[PID] = parent.identifier if parent
+        attrs[PID] ||= parent&.identifier || ROOT_PID
         attrs[CID] ||= generate_id
       end
     end
 
     def to_json
       attributes.to_json
+    end
+
+    def assign(attrs)
+      attrs.delete(CID)
+      attrs.delete(PID)
+      attributes.merge!(attrs)
     end
 
     private
@@ -61,10 +71,6 @@ module Retro
       end
     end
 
-    def item_params
-      { item: item_attributes }
-    end
-
     class << self
       def api_params
         { table_name: dynamo_table_name }
@@ -74,7 +80,7 @@ module Retro
         @table_name
       end
 
-      def find(cid:, pid: nil)
+      def find(cid:, pid: ROOT_PID)
         db.get_item(**api_params, key: { pid: pid, cid: cid }).item.yield_self { |item| new(item) if item }
       end
 

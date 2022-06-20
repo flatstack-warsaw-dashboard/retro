@@ -1,3 +1,4 @@
 *.tfstate.backup
 */**/dist
 .terraform
+functions/*/src/vendor

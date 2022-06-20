@@ -1,24 +1,13 @@
-require "logger"
-require "json"
-require "forwardable"
 require "aws-sdk-dynamodb"
 require "retro"
 
 module Retro
-  class UsersController
-    extend Forwardable
-
-    attr_reader :context
-
-    def_delegator :"self.class", :logger
-
-    def initialize(context)
-      @context = context
-    end
-
+  class UsersController < Retro::Controller
     def create(event:)
-      logger.info event
-      user = Retro::User.new(event.slice("name"))
+      params = parse_event_body_params(event)
+      logger.info params
+
+      user = Retro::User.new(params["data"]["attributes"].slice("name"))
 
       if user.save
         { statusCode: 200, body: user.to_json }
@@ -31,10 +20,6 @@ module Retro
       user = Retro::User.find(cid: event["id"])
 
       { statusCode: 200, body: user.to_json }
-    end
-
-    def self.logger
-      @logger ||= Logger.new($stdout)
     end
   end
 

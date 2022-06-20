@@ -9,9 +9,10 @@ import css from 'rollup-plugin-css-only';
 import styles from 'rollup-plugin-styles';
 import replace from 'rollup-plugin-replace';
 import { string } from 'rollup-plugin-string';
+import { apiPath } from './tf.config'
 
 const production = !process.env.ROLLUP_WATCH;
-const apiPath = "";
+
 
 function serve() {
 	let server;
