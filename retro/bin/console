@@ -12,4 +12,6 @@ require "retro"
 # Pry.start
 
 require "irb"
+require "aws-sdk-dynamodb"
+
 IRB.start(__FILE__)
