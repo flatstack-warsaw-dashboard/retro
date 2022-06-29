@@ -35,9 +35,8 @@ module Retro
 
     def put
       push_attributes = item_attributes
-      response = db.put_item(api_params.merge(item: push_attributes, return_values: RETURN_OPTIONS[:all_old]))
-      @attributes = push_attributes if response.item
-      response.item
+      db.put_item(api_params.merge(item: push_attributes, return_values: RETURN_OPTIONS[:all_old]))
+      @attributes = push_attributes
     end
     alias :save :put
 
