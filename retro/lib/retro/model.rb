@@ -9,6 +9,7 @@ module Retro
     RETURN_OPTIONS = {
       none: "NONE", all_old: "ALL_OLD", updated_old: "UPDATED_OLD", all_new: "ALL_NEW", updated_new: "UPDATED_NEW"
     }.freeze
+    ATTR_TRANSFORMATIONS = { add: "ADD", put: "PUT", delete: "DELETE" }.freeze
 
     ROOT_PID = "-".freeze
     PID = "pid".freeze
@@ -40,6 +41,19 @@ module Retro
     end
     alias :save :put
 
+    def update(method: ATTR_TRANSFORMATIONS[:put], **updates)
+      attribute_updates = prepare_attributes(updates).transform_values do |value|
+        { value: value, action: method }
+      end
+
+      response = db.update_item(api_params.merge(
+        key: identifier_params,
+        attribute_updates: attribute_updates,
+        return_values: RETURN_OPTIONS[:all_new])
+      )
+      @attributes = response.attributes
+    end
+
     def identifier_params
       { CID => identifier }.tap do |attrs|
         attrs[PID] ||= parent&.identifier || ROOT_PID
@@ -52,12 +66,18 @@ module Retro
     end
 
     def assign(attrs)
-      attrs.delete(CID)
-      attrs.delete(PID)
-      attributes.merge!(attrs)
+      attributes.merge!(prepare_attributes(attrs))
+      self
     end
 
     private
+
+    def prepare_attributes(attrs)
+      attrs.transform_keys!(&:to_sym)
+      attrs.delete(CID)
+      attrs.delete(PID)
+      attrs
+    end
 
     def generate_id
       SecureRandom.uuid
