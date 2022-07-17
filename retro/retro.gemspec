@@ -33,6 +33,7 @@ Gem::Specification.new do |spec|
 
   spec.add_development_dependency "aws-sdk-dynamodb", "~>1.74.0"
 
-  # For more information and examples about making a new gem, checkout our
-  # guide at: https://bundler.io/guides/creating_gem.html
+  # Web dependencies
+  spec.add_dependency "jsonapi-serializer", ">= 2.2.0"
+  spec.add_dependency "jwt", ">= 2.3.0"
 end

@@ -80,7 +80,7 @@ resource "aws_apigatewayv2_integration" "users_integration" {
 
 resource "aws_apigatewayv2_route" "users" {
   api_id    = aws_apigatewayv2_api.retro_api.id
-  route_key = "POST /users/{action}"
+  route_key = "ANY /users/{action}"
 
   target = "integrations/${aws_apigatewayv2_integration.users_integration.id}"
 }
@@ -112,6 +112,12 @@ resource "aws_apigatewayv2_route" "asset" {
   route_key = "GET /${each.key}"
 
   target = "integrations/${aws_apigatewayv2_integration.s3_asset_integration[each.key].id}"
+}
+
+resource "aws_apigatewayv2_route" "root" {
+  api_id    = aws_apigatewayv2_api.retro_api.id
+  route_key = "GET /"
+  target = "integrations/${aws_apigatewayv2_integration.s3_asset_integration["index.html"].id}"
 }
 
 resource "aws_s3_bucket" "assets" {

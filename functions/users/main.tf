@@ -74,6 +74,10 @@ EOT
   working_dir = "${path.module}/src"
 }
 
+data "aws_ssm_parameter" "jwt_secret" {
+  name = "RETRO_JWT_SECRET"
+}
+
 resource "aws_lambda_function" "users_lambda" {
   filename      = local.dist_path
   function_name = "users_lambda"
@@ -81,7 +85,12 @@ resource "aws_lambda_function" "users_lambda" {
   handler       = "func.Retro.route"
 
   source_code_hash = data.archive_file.source.output_base64sha256
-  environment { variables = { "GEM_PATH" = "./vendor" } }
+  environment {
+    variables = {
+      "GEM_PATH" = "./vendor"
+      "JWT_SECRET" = data.aws_ssm_parameter.jwt_secret.value
+    }
+  }
 
   runtime = "ruby2.7"
 

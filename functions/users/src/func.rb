@@ -3,23 +3,25 @@ require "retro"
 
 module Retro
   class UsersController < Retro::Controller
-    def create(event:)
+    def_action :create do |event:|
       params = parse_event_body_params(event)
-      logger.info params
-
       user = Retro::User.new(params["data"]["attributes"].slice("name"))
 
       if user.save
-        { statusCode: 200, body: user.to_json }
+        { statusCode: 200, body: Retro::Serializers::UserSerializer.new(user, include: [:jwt_token]).serializable_hash.to_json }
       else
         { statusCode: 400, body: {}.to_json }
       end
     end
 
-    def show(event:)
-      user = Retro::User.find(cid: event["id"])
+    def_action :show do |event:|
+      authenticate!
+      user = event.dig("queryStringParameters", "id") ? Retro::User.find(cid: event["queryStringParameters"]["id"]) : current_user
 
-      { statusCode: 200, body: user.to_json }
+      serialization_options = {}
+      serialization_options[:include] = [:boards] if user == current_user
+
+      { statusCode: 200, body: Retro::Serializers::UserSerializer.new(user, serialization_options).serializable_hash.to_json }
     end
   end
 

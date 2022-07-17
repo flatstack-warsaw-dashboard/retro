@@ -1,5 +1,3 @@
-require "forwardable"
-
 module Retro
   class Model
     extend Forwardable
@@ -10,10 +8,12 @@ module Retro
       none: "NONE", all_old: "ALL_OLD", updated_old: "UPDATED_OLD", all_new: "ALL_NEW", updated_new: "UPDATED_NEW"
     }.freeze
     ATTR_TRANSFORMATIONS = { add: "ADD", put: "PUT", delete: "DELETE" }.freeze
+    DATA_TABLE = "data".freeze
 
     ROOT_PID = "-".freeze
     PID = "pid".freeze
     CID = "cid".freeze
+    TYPE = "type".freeze
 
     attr_reader :attributes
     attr_accessor :parent
@@ -26,6 +26,10 @@ module Retro
       attributes[CID]
     end
 
+    def parent_identifier
+      attributes[PID]
+    end
+
     def new?
       identifier.nil?
     end
@@ -36,6 +40,7 @@ module Retro
 
     def put
       push_attributes = item_attributes
+      push_attributes["updated_at"] = Time.now.to_i
       db.put_item(api_params.merge(item: push_attributes, return_values: RETURN_OPTIONS[:all_old]))
       @attributes = push_attributes
     end
@@ -70,12 +75,21 @@ module Retro
       self
     end
 
+    def created_at
+      Time.at(attributes["created_at"]) if attributes["created_at"]
+    end
+
+    def updated_at
+      Time.at(attributes["updated_at"]) if attributes["updated_at"]
+    end
+
     private
 
     def prepare_attributes(attrs)
       attrs.transform_keys!(&:to_sym)
       attrs.delete(CID)
       attrs.delete(PID)
+      attrs.delete(TYPE)
       attrs
     end
 
@@ -86,11 +100,16 @@ module Retro
     def item_attributes
       attributes.dup.tap do |attrs|
         attrs.merge! identifier_params
-        attrs["type"] ||= self.class.name.split("::").last.downcase
+        attrs[TYPE] ||= self.class.model_type
+        attrs["created_at"] ||= Time.now.to_i
       end
     end
 
     class << self
+      def model_type
+        name.split("::").last.downcase
+      end
+
       def api_params
         { table_name: dynamo_table_name }
       end
