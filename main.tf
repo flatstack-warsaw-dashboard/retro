@@ -21,10 +21,22 @@ resource "aws_dynamodb_table" "data" {
   point_in_time_recovery {
     enabled = true
   }
+
+  global_secondary_index {
+    name               = "cid_si"
+    hash_key           = "cid"
+    projection_type    = "KEYS_ONLY"
+  }
 }
 
 module "users_lambda" {
   source = "./functions/users"
+  data_table = aws_dynamodb_table.data
+  depends_on = [data.external.app_gem, aws_dynamodb_table.data]
+}
+
+module "boards_lambda" {
+  source = "./functions/boards"
   data_table = aws_dynamodb_table.data
   depends_on = [data.external.app_gem, aws_dynamodb_table.data]
 }
@@ -51,9 +63,17 @@ resource "aws_apigatewayv2_api" "retro_api" {
   protocol_type = "HTTP"
 }
 
-resource "aws_lambda_permission" "users_invoke_permission" {
+locals {
+  lambda_resources = {
+    "users" = { "module" = module.users_lambda },
+    "boards" = { "module" = module.boards_lambda }
+  }
+}
+
+resource "aws_lambda_permission" "invoke_permission" {
+  for_each = local.lambda_resources
   action        = "lambda:InvokeFunction"
-  function_name = module.users_lambda.lambda.arn
+  function_name = each.value.module.lambda.arn
   principal     = "apigateway.amazonaws.com"
 
   source_arn = "${aws_apigatewayv2_api.retro_api.execution_arn}/*/*"
@@ -65,24 +85,26 @@ resource "aws_apigatewayv2_stage" "default" {
   auto_deploy = true
 }
 
-resource "aws_apigatewayv2_integration" "users_integration" {
+resource "aws_apigatewayv2_integration" "lambda_integration" {
+  for_each = local.lambda_resources
   api_id           = aws_apigatewayv2_api.retro_api.id
   integration_type = "AWS_PROXY"
 
   connection_type           = "INTERNET"
-  description               = "Users lambda integration"
+  description               = "${each.key} lambda integration"
   integration_method        = "POST"
-  integration_uri           = module.users_lambda.lambda.invoke_arn
+  integration_uri           = each.value.module.lambda.invoke_arn
   request_parameters     = {
     "append:querystring.action" = "$request.path.action"
   }
 }
 
-resource "aws_apigatewayv2_route" "users" {
+resource "aws_apigatewayv2_route" "lambda_route" {
+  for_each = local.lambda_resources
   api_id    = aws_apigatewayv2_api.retro_api.id
-  route_key = "ANY /users/{action}"
+  route_key = "POST /${each.key}/{action}"
 
-  target = "integrations/${aws_apigatewayv2_integration.users_integration.id}"
+  target = "integrations/${aws_apigatewayv2_integration.lambda_integration[each.key].id}"
 }
 
 locals {
@@ -118,6 +140,25 @@ resource "aws_apigatewayv2_route" "root" {
   api_id    = aws_apigatewayv2_api.retro_api.id
   route_key = "GET /"
   target = "integrations/${aws_apigatewayv2_integration.s3_asset_integration["index.html"].id}"
+}
+
+resource "aws_apigatewayv2_route" "board_show" {
+  api_id    = aws_apigatewayv2_api.retro_api.id
+  route_key = "GET /boards/{board_id}"
+  target = "integrations/${aws_apigatewayv2_integration.board_path_integration.id}"
+}
+
+resource "aws_apigatewayv2_integration" "board_path_integration" {
+  api_id           = aws_apigatewayv2_api.retro_api.id
+  integration_type = "HTTP_PROXY"
+
+  connection_type           = "INTERNET"
+  description               = "S3 integration"
+  integration_method        = "GET"
+  integration_uri           = "https://${aws_s3_bucket.assets.bucket_regional_domain_name}/client/index.html"
+  request_parameters        = {
+    "append:querystring.board_id" = "$request.path.board_id"
+  }
 }
 
 resource "aws_s3_bucket" "assets" {

@@ -1,15 +1,15 @@
 variable "data_table" {}
 
 resource "aws_iam_role" "lambda_role" {
-  name = "users_lambda_role"
+  name = "boards_lambda_role"
   assume_role_policy = jsonencode({
     "Version" : "2012-10-17",
     "Statement" : [
       {
         "Action" : "sts:AssumeRole",
         "Principal" : {
-        "Service" : "lambda.amazonaws.com"
-      },
+          "Service" : "lambda.amazonaws.com"
+        },
         "Effect" : "Allow",
         "Sid" : ""
       }
@@ -18,9 +18,9 @@ resource "aws_iam_role" "lambda_role" {
 }
 
 resource "aws_iam_policy" "lambda_policy" {
-  name         = "aws_iam_policy_for_terraform_aws_users_lambda_role"
+  name         = "aws_iam_policy_for_terraform_aws_boards_lambda_role"
   path         = "/"
-  description  = "AWS IAM Policy for managing users lambda role"
+  description  = "AWS IAM Policy for managing boards lambda role"
 
   policy = jsonencode({
     "Version": "2012-10-17",
@@ -78,9 +78,9 @@ data "aws_ssm_parameter" "jwt_secret" {
   name = "RETRO_JWT_SECRET"
 }
 
-resource "aws_lambda_function" "users_lambda" {
+resource "aws_lambda_function" "boards_lambda" {
   filename      = local.dist_path
-  function_name = "users_lambda"
+  function_name = "boards_lambda"
   role          = aws_iam_role.lambda_role.arn
   handler       = "func.Retro.route"
 
@@ -100,5 +100,5 @@ resource "aws_lambda_function" "users_lambda" {
 }
 
 output "lambda" {
-  value = aws_lambda_function.users_lambda
+  value = aws_lambda_function.boards_lambda
 }

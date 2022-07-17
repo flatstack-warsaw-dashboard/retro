@@ -8,7 +8,7 @@ module Retro
       user = Retro::User.new(params["data"]["attributes"].slice("name"))
 
       if user.save
-        { statusCode: 200, body: Retro::Serializers::UserSerializer.new(user, include: [:jwt_token]).serializable_hash.to_json }
+        { statusCode: 201, body: Retro::Serializers::UserSerializer.new(user, include: [:jwt_token]).serializable_hash.to_json }
       else
         { statusCode: 400, body: {}.to_json }
       end

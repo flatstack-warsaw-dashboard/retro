@@ -3,13 +3,12 @@ module Retro
     table_name DATA_TABLE
 
     def boards
-      @boards ||= db.query(
-        table_name: Retro::User.dynamo_table_name,
+      @boards ||= Retro::Board.query(
         key_condition_expression: "#{PID} = :user_id",
-        expression_attribute_values: { ":user_id" => identifier }
-      ).items.map { |ba| Retro::Board.new(ba) }
-    rescue Aws::DynamoDB::Errors::ResourceNotFoundException
-      []
+        filter_expression: "#type = :model_type",
+        expression_attribute_names: { "#type" => "type" },
+        expression_attribute_values: { ":user_id" => identifier, ":model_type" => Retro::Board.model_type }
+      )
     end
 
     def name

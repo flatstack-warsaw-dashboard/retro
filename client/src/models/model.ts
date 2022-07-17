@@ -73,7 +73,7 @@ export abstract class Model<Schema extends AttributesConstructor> {
 
     const findParams = this.id ? {id: this.id} : {}
     const response = await window.fetch(this.resourceURL("show", findParams), {
-      method: "GET",
+      method: "POST",
       headers: Model.requestHeaders(),
     });
 
@@ -89,7 +89,7 @@ export abstract class Model<Schema extends AttributesConstructor> {
     failure?: (instance: Model<Schema>) => void
   ): Promise<Model<Schema>> | null {
     const response = await window.fetch(this.resourceURL(this.id ? "update" : "create"), {
-      method: this.persisted() ? "PATCH" : "POST",
+      method: "POST",
       headers: Model.requestHeaders(),
       body: JSON.stringify({
         id: this.id,
@@ -119,7 +119,7 @@ export abstract class Model<Schema extends AttributesConstructor> {
     if (!this.persisted()) { return null; }
 
     const response = await window.fetch(this.resourceURL("destroy"), {
-      method: "DELETE",
+      method: "POST",
       headers: Model.requestHeaders(),
       body: JSON.stringify({ id: this.id, type: this.type })
     });
@@ -183,7 +183,7 @@ export class Collection<T extends Model<Schema extends AttributesConstructor>> {
   fetch = async (params?: Record<string, string>): Promise<T[]> => {
     this.models = [];
     const response = await window.fetch(this.resourceURL("index", params), {
-      method: "GET",
+      method: "POST",
       headers: Model.requestHeaders(),
     });
 

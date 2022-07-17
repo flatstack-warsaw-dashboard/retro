@@ -18,8 +18,8 @@ module Retro
     attr_reader :attributes
     attr_accessor :parent
 
-    def initialize(attributes = {})
-      @attributes = attributes
+    def initialize(attributes = defaults)
+      @attributes = attributes.merge(defaults)
     end
 
     def identifier
@@ -27,7 +27,7 @@ module Retro
     end
 
     def parent_identifier
-      attributes[PID]
+      parent&.identifier || attributes[PID]
     end
 
     def new?
@@ -43,6 +43,8 @@ module Retro
       push_attributes["updated_at"] = Time.now.to_i
       db.put_item(api_params.merge(item: push_attributes, return_values: RETURN_OPTIONS[:all_old]))
       @attributes = push_attributes
+      after_save
+      attributes
     end
     alias :save :put
 
@@ -57,11 +59,13 @@ module Retro
         return_values: RETURN_OPTIONS[:all_new])
       )
       @attributes = response.attributes
+      after_save
+      attributes
     end
 
     def identifier_params
-      { CID => identifier }.tap do |attrs|
-        attrs[PID] ||= parent&.identifier || ROOT_PID
+      { CID => identifier, PID => parent_identifier }.tap do |attrs|
+        attrs[PID] ||= ROOT_PID
         attrs[CID] ||= generate_id
       end
     end
@@ -83,7 +87,13 @@ module Retro
       Time.at(attributes["updated_at"]) if attributes["updated_at"]
     end
 
+    def defaults
+      {}
+    end
+
     private
+
+    def after_save; end
 
     def prepare_attributes(attrs)
       attrs.transform_keys!(&:to_sym)
@@ -119,11 +129,28 @@ module Retro
       end
 
       def find(cid:, pid: ROOT_PID)
-        db.get_item(**api_params, key: { pid: pid, cid: cid }).item.yield_self { |item| new(item) if item }
+        db.get_item(**api_params, key: { pid: pid, cid: cid }).item.yield_self do |item|
+          new(item) if item && item["type"] == model_type
+        end
       end
 
-      def all
-        db.scan(api_params).items.map { |attrs| new(attrs) }
+      def scan
+        db.scan(
+          **api_params,
+          scan_filter: { "type" => { attribute_value_list: [model_type], comparison_operator: "EQ" } }
+        ).items.map { |attrs| new(attrs) }
+      end
+
+      def query(**params)
+        db.query(table_name: dynamo_table_name, **params).items.map do |m|
+          new(m) if m && (!m.key?("type") || m["type"] == model_type)
+        end.compact
+      rescue Aws::DynamoDB::Errors::ResourceNotFoundException
+        []
+      end
+
+      def si_query(**params)
+        query(index_name: "cid_si", **params).map { |keys| find(pid: keys.parent_identifier, cid: keys.identifier) }
       end
 
       def db

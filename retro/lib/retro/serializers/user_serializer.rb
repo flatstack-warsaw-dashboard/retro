@@ -8,7 +8,7 @@ module Retro
     end
 
     class UserSerializer < ApplicationSerializer
-      has_many :boards do |o|
+      has_many :boards, id_method_name: :identifier do |o|
         o.boards
       end
 
