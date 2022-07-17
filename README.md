@@ -23,7 +23,7 @@ Such files should be included in `main.tf` file as Terraform module.
 
 You can run ruby console and interact with DynamoDB records via:
 `cd ./retro && AWS_PROFILE="your_profile_name" bin/console`
-After this you will be awailable to access model objects (Example: list all users via command `Retro::User.all`)
+After this you will be awailable to access model objects (Example: list all users via command `Retro::User.scan`)
 
 ## Contributing
 
